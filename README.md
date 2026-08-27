@@ -141,6 +141,15 @@ omarchy plugin remove ubeyidah.omaclock
 The plugin only ever draws a transparent layer; removing it leaves no trace.
 You can also delete `~/.config/omaclock/config.json` if you no longer want it.
 
+## Troubleshooting & Common Fixes
+
+### OmaClock Clickthrough and Double-Click Fix
+If you previously experienced an issue where OmaClock blocked desktop mouse interactions (such as double-clicking the desktop wallpaper):
+
+This bug has been **officially fixed natively** within the core OmaClock repository. The fix implements `mask: Region {}` directly inside the `PanelWindow`.
+
+You **do not need** external standalone installation scripts or community patches to fix this behavior. Simply ensure you are running the latest official version of OmaClock.
+
 ## License
 
 - Plugin code: [MIT](LICENSE)
