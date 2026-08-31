@@ -7,6 +7,7 @@
   "letterSpacing": -3,
   "color": "",
   "opacity": 0.92,
+  "showIcon": true,
   "position": "top",
   "yRatio": 0.20,
   "namespace": "ubeyidah.omaclock"

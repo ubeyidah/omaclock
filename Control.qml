@@ -26,6 +26,8 @@ BarWidget {
     property string mode: "auto"
     property string colorRole: "bar.text"
     property string customColor: "#ffffff"
+    // Show/hide toggle — synced from service on open
+    property bool showIcon: true
     // Font selector state
     property bool fontTabOpen: false
     property var fontOptions: []
@@ -112,17 +114,30 @@ BarWidget {
             waitForEnd: true
             onStreamFinished: {
                 var output = String(text || "").trim()
+                var opts = []
                 if (output.length > 0) {
                     var lines = output.split("\n")
-                    var opts = []
                     for (var i = 0; i < lines.length; i++) {
                         var name = lines[i].trim()
                         if (name.length > 0) opts.push({ value: name, label: name })
                     }
-                    root.fontOptions = opts
-                    root.fontListLoaded = true
-                    root.recomputeFontFilter()
                 }
+                // Always include the bundled fonts so they appear regardless
+                // of whether the system font list found them.
+                var bundled = [
+                    { value: "Inter Variable",      label: "Inter Variable (bundled)" },
+                    { value: "Plus Jakarta Sans",   label: "Plus Jakarta Sans (bundled)" }
+                ]
+                for (var b = 0; b < bundled.length; b++) {
+                    var already = false
+                    for (var j = 0; j < opts.length; j++) {
+                        if (opts[j].value === bundled[b].value) { already = true; break }
+                    }
+                    if (!already) opts.push(bundled[b])
+                }
+                root.fontOptions = opts
+                root.fontListLoaded = true
+                root.recomputeFontFilter()
             }
         }
     }
@@ -146,6 +161,17 @@ BarWidget {
         root.colorRole = String(root.svc.settings.colorRole || "bar.text");
         root.customColor = String(root.svc.settings.color || "#ffffff");
         root.selectedFont = String(root.svc.settings.fontFamily || "");
+        root.showIcon = root.svc.settings.showIcon !== false;
+    }
+
+    function toggleShowIcon() {
+        if (!root.svc) return;
+        var next = {};
+        for (var k in root.svc.settings) next[k] = root.svc.settings[k];
+        next.showIcon = !root.showIcon;
+        root.showIcon = next.showIcon;
+        root.svc.settings = next;
+        root.svc.saveConfig();
     }
 
     function setFontFamily(font) {
@@ -449,6 +475,47 @@ BarWidget {
                 }
             }
 
+            Row {
+                visible: !root.fontTabOpen
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                    text: "Opacity"
+                    color: Color.popups.text
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                    width: parent.width - opacityValue.implicitWidth - parent.spacing
+                }
+
+                Text {
+                    id: opacityValue
+
+                    text: Math.round(opacitySlider.liveValue) + "%"
+                    color: Qt.darker(Color.popups.text, 1.4)
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+
+            }
+
+            PanelSlider {
+                id: opacitySlider
+
+                visible: !root.fontTabOpen
+                width: parent.width
+                minimum: 0
+                maximum: 100
+                step: 1
+                value: root.svc ? Math.round((root.svc.settings.opacity != null ? Number(root.svc.settings.opacity) : 0.92) * 100) : 92
+                onMoved: function(v) {
+                    root.setSlider("opacity", v);
+                }
+                onReleased: function() {
+                    root.persistSliders();
+                }
+            }
+
             Text {
                 visible: !root.fontTabOpen
                 text: "POSITION"
@@ -557,6 +624,16 @@ BarWidget {
                     verticalPadding: 4
                     fontSize: Style.font.bodySmall
                     onClicked: root.openFontTab()
+                }
+
+                Button {
+                    text: root.showIcon ? "Hide" : "Show"
+                    selected: !root.showIcon
+                    foreground: Color.popups.text
+                    horizontalPadding: Style.space(10)
+                    verticalPadding: 4
+                    fontSize: Style.font.bodySmall
+                    onClicked: root.toggleShowIcon()
                 }
 
             }
