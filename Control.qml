@@ -345,7 +345,7 @@ BarWidget {
         bar: root.bar
         open: root.menuOpen
         focusTarget: root.fontTabOpen ? fontSearchField : null
-        contentWidth: popup.fittedContentWidth(Style.space(300))
+        contentWidth: popup.fittedContentWidth(Style.space(340))
         contentHeight: popup.fittedContentHeight(column.implicitHeight, Style.space(560))
 
         Column {
@@ -638,12 +638,6 @@ BarWidget {
                     onClicked: root.setMode("custom")
                 }
 
-            }
-
-            Row {
-                width: parent.width
-                spacing: Style.space(6)
-
                 Button {
                     text: "Font"
                     selected: root.fontTabOpen
@@ -905,44 +899,28 @@ onTextChanged: {
                 }
             }
 
-            Row {
+            Rectangle {
+                id: resetBtn
+
+                visible: !root.fontTabOpen
                 width: parent.width
-                spacing: Style.space(8)
-
-                Rectangle {
-                    id: resetBtn
-
-                    visible: !root.fontTabOpen
-                    width: Style.space(88)
-                    height: Style.space(26)
-                    radius: Style.cornerRadius
-                    color: Style.selectedFill
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "RESET"
-                        color: Color.foreground
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.body
-                        font.bold: true
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.resetAll()
-                    }
-
-                }
+                height: Style.space(26)
+                radius: Style.cornerRadius
+                color: Style.selectedFill
 
                 Text {
-                    text: "Resets size and position"
-                    color: Qt.darker(Color.popups.text, 1.5)
+                    anchors.centerIn: parent
+                    text: "RESET"
+                    color: Color.foreground
                     font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: resetBtn.verticalCenter
-                    elide: Text.ElideRight
-                    width: parent.width - resetBtn.width - parent.spacing
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.resetAll()
                 }
 
             }
