@@ -93,6 +93,7 @@ BarWidget {
         var s = root.bar.shell.serviceFor(root.moduleName);
         if (s) {
             root.svc = s;
+            root.showIcon = s.settings.showIcon !== false;
             return true;
         }
         return false;
@@ -282,6 +283,7 @@ BarWidget {
         }
     }
 
+    visible: root.showIcon
     moduleName: "ubeyidah.omaclock"
     onBarChanged: {
         if (!refreshService())
@@ -384,7 +386,7 @@ BarWidget {
                 minimum: 5
                 maximum: 45
                 step: 1
-                value: root.svc ? Math.round(root.svc.fontScale * 100) : 20
+                value: root.svc ? Math.round((root.svc.settings.fontScale != null ? Number(root.svc.settings.fontScale) : 0.15) * 100) : 20
                 onMoved: function(v) {
                     root.setSlider("fontScale", v);
                 }

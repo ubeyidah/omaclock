@@ -232,7 +232,7 @@ Item {
       required property var modelData
 
       screen: modelData
-      visible: root.settings.showIcon
+      visible: true
       anchors { top: true; bottom: true; left: true; right: true }
       color: "transparent"
       updatesEnabled: true
