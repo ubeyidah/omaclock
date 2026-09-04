@@ -33,6 +33,8 @@ BarWidget {
     property var fontOptions: []
     property bool fontListLoaded: false
     property string selectedFont: ""
+    property string clockFormat: "h:mm"
+    property bool showSeconds: false
     property string fontSearch: ""
     property var filteredFonts: []
 
@@ -94,6 +96,8 @@ BarWidget {
         if (s) {
             root.svc = s;
             root.showIcon = s.settings.showIcon !== false;
+            root.clockFormat = String(s.settings.format || "h:mm");
+            root.showSeconds = s.settings.showSeconds === true;
             return true;
         }
         return false;
@@ -106,11 +110,11 @@ BarWidget {
 
     readonly property bool opened: root.menuOpen
 
-    // Font list loader — runs omarchy-font-list on first open and caches
-    // the result. The full available font list is shown (no filtering).
+    // Font list loader — reads from ~/.cache/omaclock/fonts.txt if available,
+    // otherwise runs omarchy-font-list once and caches the result for next time.
     property Process fontListProc: Process {
         id: fontListProc
-        command: ["bash", "-lc", "omarchy-font-list 2>/dev/null"]
+        command: ["bash", "-lc", "CACHE=~/.cache/omaclock/fonts.txt; if [ -f \"$CACHE\" ]; then cat \"$CACHE\"; else mkdir -p ~/.cache/omaclock && omarchy-font-list 2>/dev/null | tee \"$CACHE\"; fi"]
         stdout: StdioCollector {
             waitForEnd: true
             onStreamFinished: {
@@ -123,8 +127,6 @@ BarWidget {
                         if (name.length > 0) opts.push({ value: name, label: name })
                     }
                 }
-                // Always include the bundled fonts so they appear regardless
-                // of whether the system font list found them.
                 var bundled = [
                     { value: "Inter Variable",      label: "Inter Variable (bundled)" },
                     { value: "Plus Jakarta Sans",   label: "Plus Jakarta Sans (bundled)" }
@@ -162,6 +164,8 @@ BarWidget {
         root.colorRole = String(root.svc.settings.colorRole || "bar.text");
         root.customColor = String(root.svc.settings.color || "#ffffff");
         root.selectedFont = String(root.svc.settings.fontFamily || "");
+        root.clockFormat = String(root.svc.settings.format || "h:mm");
+        root.showSeconds = root.svc.settings.showSeconds === true;
         root.showIcon = root.svc.settings.showIcon !== false;
     }
 
@@ -171,6 +175,25 @@ BarWidget {
         for (var k in root.svc.settings) next[k] = root.svc.settings[k];
         next.showIcon = !root.showIcon;
         root.showIcon = next.showIcon;
+        root.svc.settings = next;
+        root.svc.saveConfig();
+    }
+
+    property var formatPresets: [
+        { label: "12h",    fmt: "h:mm",    secs: false },
+        { label: "12h +s", fmt: "h:mm:ss", secs: true },
+        { label: "24h",    fmt: "HH:mm",   secs: false },
+        { label: "24h +s", fmt: "HH:mm:ss", secs: true }
+    ]
+
+    function setFormat(fmt, secs) {
+        if (!root.svc) return;
+        root.clockFormat = fmt;
+        root.showSeconds = secs;
+        var next = {};
+        for (var k in root.svc.settings) next[k] = root.svc.settings[k];
+        next.format = fmt;
+        next.showSeconds = secs;
         root.svc.settings = next;
         root.svc.saveConfig();
     }
@@ -601,6 +624,27 @@ BarWidget {
                 }
                 onReleased: function() {
                     root.persistSliders();
+                }
+            }
+
+            Flow {
+                visible: !root.fontTabOpen
+                width: parent.width
+                spacing: Style.space(6)
+
+                Repeater {
+                    model: root.formatPresets
+
+                    delegate: Button {
+                        required property var modelData
+                        text: modelData.label
+                        selected: root.clockFormat === modelData.fmt && root.showSeconds === modelData.secs
+                        foreground: Color.popups.text
+                        horizontalPadding: Style.space(10)
+                        verticalPadding: 4
+                        fontSize: Style.font.bodySmall
+                        onClicked: root.setFormat(modelData.fmt, modelData.secs)
+                    }
                 }
             }
 
