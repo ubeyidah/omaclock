@@ -387,16 +387,6 @@ BarWidget {
                 font.bold: true
             }
 
-            Text {
-                visible: !root.fontTabOpen
-                text: "SIZE"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
-            }
-
             Row {
                 visible: !root.fontTabOpen
                 width: parent.width
@@ -436,16 +426,6 @@ BarWidget {
                 onReleased: function() {
                     root.persistSliders();
                 }
-            }
-
-            Text {
-                visible: !root.fontTabOpen
-                text: "POSITION"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
             }
 
             Row {
@@ -575,15 +555,6 @@ BarWidget {
 
                 }
 
-            }
-
-            Text {
-                text: "APPEARANCE"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
             }
 
             Row {
