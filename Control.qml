@@ -364,6 +364,16 @@ BarWidget {
                 font.bold: true
             }
 
+            Text {
+                visible: !root.fontTabOpen
+                text: "SIZE"
+                color: Color.popups.text
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                topPadding: Style.space(4)
+            }
+
             Row {
                 visible: !root.fontTabOpen
                 width: parent.width
@@ -403,6 +413,16 @@ BarWidget {
                 onReleased: function() {
                     root.persistSliders();
                 }
+            }
+
+            Text {
+                visible: !root.fontTabOpen
+                text: "POSITION"
+                color: Color.popups.text
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                topPadding: Style.space(4)
             }
 
             Row {
@@ -487,57 +507,6 @@ BarWidget {
                 }
             }
 
-            Row {
-                visible: !root.fontTabOpen
-                width: parent.width
-                spacing: Style.space(6)
-
-                Text {
-                    text: "Opacity"
-                    color: Color.popups.text
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.body
-                    width: parent.width - opacityValue.implicitWidth - parent.spacing
-                }
-
-                Text {
-                    id: opacityValue
-
-                    text: Math.round(opacitySlider.liveValue) + "%"
-                    color: Qt.darker(Color.popups.text, 1.4)
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.body
-                }
-
-            }
-
-            PanelSlider {
-                id: opacitySlider
-
-                visible: !root.fontTabOpen
-                width: parent.width
-                minimum: 0
-                maximum: 100
-                step: 1
-                value: root.svc ? Math.round((root.svc.settings.opacity != null ? Number(root.svc.settings.opacity) : 0.92) * 100) : 92
-                onMoved: function(v) {
-                    root.setSlider("opacity", v);
-                }
-                onReleased: function() {
-                    root.persistSliders();
-                }
-            }
-
-            Text {
-                visible: !root.fontTabOpen
-                text: "POSITION"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
-            }
-
             Grid {
                 visible: !root.fontTabOpen
                 width: parent.width
@@ -586,12 +555,53 @@ BarWidget {
             }
 
             Text {
-                text: "COLOR"
+                text: "APPEARANCE"
                 color: Color.popups.text
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 topPadding: Style.space(4)
+            }
+
+            Row {
+                visible: !root.fontTabOpen
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                    text: "Opacity"
+                    color: Color.popups.text
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                    width: parent.width - opacityValue.implicitWidth - parent.spacing
+                }
+
+                Text {
+                    id: opacityValue
+
+                    text: Math.round(opacitySlider.liveValue) + "%"
+                    color: Qt.darker(Color.popups.text, 1.4)
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+
+            }
+
+            PanelSlider {
+                id: opacitySlider
+
+                visible: !root.fontTabOpen
+                width: parent.width
+                minimum: 0
+                maximum: 100
+                step: 1
+                value: root.svc ? Math.round((root.svc.settings.opacity != null ? Number(root.svc.settings.opacity) : 0.92) * 100) : 92
+                onMoved: function(v) {
+                    root.setSlider("opacity", v);
+                }
+                onReleased: function() {
+                    root.persistSliders();
+                }
             }
 
             Row {
@@ -627,6 +637,12 @@ BarWidget {
                     fontSize: Style.font.bodySmall
                     onClicked: root.setMode("custom")
                 }
+
+            }
+
+            Row {
+                width: parent.width
+                spacing: Style.space(6)
 
                 Button {
                     text: "Font"
