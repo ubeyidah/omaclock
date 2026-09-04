@@ -648,7 +648,8 @@ BarWidget {
                 }
             }
 
-            Row {
+            Flow {
+                visible: !root.fontTabOpen
                 width: parent.width
                 spacing: Style.space(6)
 
@@ -947,7 +948,7 @@ onTextChanged: {
                 id: resetBtn
 
                 visible: !root.fontTabOpen
-                width: parent.width
+                width: Style.space(88)
                 height: Style.space(26)
                 radius: Style.cornerRadius
                 color: Style.selectedFill
