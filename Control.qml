@@ -114,7 +114,7 @@ BarWidget {
     // otherwise runs omarchy-font-list once and caches the result for next time.
     property Process fontListProc: Process {
         id: fontListProc
-        command: ["bash", "-lc", "CACHE=~/.cache/omaclock/fonts.txt; if [ -f \"$CACHE\" ]; then cat \"$CACHE\"; else mkdir -p ~/.cache/omaclock && omarchy-font-list 2>/dev/null | tee \"$CACHE\"; fi"]
+        command: ["bash", "-lc", "CACHE=~/.cache/omaclock/fonts.txt; if [ -s \"$CACHE\" ]; then cat \"$CACHE\"; else mkdir -p ~/.cache/omaclock; TMP=\"$CACHE.tmp\"; omarchy-font-list 2>/dev/null | tee \"$TMP\"; if [ -s \"$TMP\" ]; then mv \"$TMP\" \"$CACHE\"; cat \"$CACHE\"; else rm -f \"$TMP\"; fi; fi"]
         stdout: StdioCollector {
             waitForEnd: true
             onStreamFinished: {

@@ -151,8 +151,8 @@ Item {
   }
 
   function resetLayout() {
-    root.setField("xRatio", root.num(root.defaults.xRatio, 0.5))
-    root.setField("yRatio", root.num(root.defaults.yRatio, 0.5))
+    root.setField("xRatio", root.defaults.xRatio)
+    root.setField("yRatio", root.defaults.yRatio)
     root.setField("fontScale", root.num(root.defaults.fontScale, 0.15))
     root.setField("opacity", root.num(root.defaults.opacity, 0.92))
     root.setField("showIcon", root.defaults.showIcon)

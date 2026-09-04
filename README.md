@@ -65,17 +65,8 @@ Click the **OmaClock** button in the status bar to open the panel:
 | `showIcon`      | `true`              | Show the bar widget icon. Set to `false` to hide it.                       |
 | `xRatio`        | `0.5`               | Horizontal position, 0–1.                                                   |
 | `yRatio`        | `0.20`              | Vertical position, 0–1 (overrides `position`).                             |
+| `position`      | `top`               | Vertical anchor when `yRatio` is not set: `top` / `center` / `bottom`.     |
 | `namespace`     | `ubeyidah.omaclock` | Layer namespace (advanced).                                                 |
-
-### Config-only settings
-
-These work from `config.json` but have no UI yet:
-
-| Key             | Default | Description                                            |
-|-----------------|---------|--------------------------------------------------------|
-| `showSeconds`   | `false` | Show seconds in the clock.                             |
-| `letterSpacing` | `-3`    | Extra spacing between numerals.                        |
-| `fontWeight`    | `200`   | Numeral weight, 100–900.                               |
 
 ### Fonts
 
@@ -129,8 +120,8 @@ omarchy restart shell
 ```
 
 **Bar widget is hidden and I can't get it back.**
-Edit `~/.config/omaclock/config.json`, set `"showIcon": true`, then reload the
-shell.
+Edit `~/.config/omaclock/config.json` and set `"showIcon": true`. The bar icon
+should reappear automatically within ~2s.
 
 ## Uninstall
 
