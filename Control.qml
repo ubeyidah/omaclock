@@ -368,7 +368,7 @@ BarWidget {
         bar: root.bar
         open: root.menuOpen
         focusTarget: root.fontTabOpen ? fontSearchField : null
-        contentWidth: popup.fittedContentWidth(Style.space(340))
+        contentWidth: popup.fittedContentWidth(Style.space(380))
         contentHeight: popup.fittedContentHeight(column.implicitHeight, Style.space(560))
 
         Column {
