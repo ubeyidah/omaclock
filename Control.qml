@@ -309,6 +309,16 @@ BarWidget {
         }
     }
 
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root.svc != null
+        onTriggered: {
+            var v = root.svc.settings.showIcon !== false;
+            if (v !== root.showIcon) root.showIcon = v;
+        }
+    }
+
     BarIconButton {
         id: button
 
