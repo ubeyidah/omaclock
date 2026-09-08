@@ -35,6 +35,7 @@ Item {
     colorRole: "bar.text",
     color: "",
     opacity: 0.92,
+    showIcon: true,
     position: "top",
     xRatio: null,
     yRatio: null,
@@ -150,10 +151,11 @@ Item {
   }
 
   function resetLayout() {
-    root.setField("xRatio", root.num(root.defaults.xRatio, 0.5))
-    root.setField("yRatio", root.num(root.defaults.yRatio, 0.5))
+    root.setField("xRatio", root.defaults.xRatio)
+    root.setField("yRatio", root.defaults.yRatio)
     root.setField("fontScale", root.num(root.defaults.fontScale, 0.15))
     root.setField("opacity", root.num(root.defaults.opacity, 0.92))
+    root.setField("showIcon", root.defaults.showIcon)
     root.saveConfig()
   }
 
@@ -174,6 +176,7 @@ Item {
       "colorRole": String(s.colorRole || "bar.text"),
       "color": String(s.color || ""),
       "opacity": Number(root.num(s.opacity, 0.92).toFixed(2)),
+      "showIcon": s.showIcon !== false,
       "position": s.position,
       "xRatio": Number(root.xRatio.toFixed(4)),
       "yRatio": Number(root.yRatio.toFixed(4)),

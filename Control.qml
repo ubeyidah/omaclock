@@ -26,11 +26,15 @@ BarWidget {
     property string mode: "auto"
     property string colorRole: "bar.text"
     property string customColor: "#ffffff"
+    // Show/hide toggle — synced from service on open
+    property bool showIcon: true
     // Font selector state
     property bool fontTabOpen: false
     property var fontOptions: []
     property bool fontListLoaded: false
     property string selectedFont: ""
+    property string clockFormat: "h:mm"
+    property bool showSeconds: false
     property string fontSearch: ""
     property var filteredFonts: []
 
@@ -91,6 +95,9 @@ BarWidget {
         var s = root.bar.shell.serviceFor(root.moduleName);
         if (s) {
             root.svc = s;
+            root.showIcon = s.settings.showIcon !== false;
+            root.clockFormat = String(s.settings.format || "h:mm");
+            root.showSeconds = s.settings.showSeconds === true;
             return true;
         }
         return false;
@@ -103,26 +110,37 @@ BarWidget {
 
     readonly property bool opened: root.menuOpen
 
-    // Font list loader — runs omarchy-font-list on first open and caches
-    // the result. The full available font list is shown (no filtering).
+    // Font list loader — reads from ~/.cache/omaclock/fonts.txt if available,
+    // otherwise runs omarchy-font-list once and caches the result for next time.
     property Process fontListProc: Process {
         id: fontListProc
-        command: ["bash", "-lc", "omarchy-font-list 2>/dev/null"]
+        command: ["bash", "-lc", "CACHE=~/.cache/omaclock/fonts.txt; if [ -s \"$CACHE\" ]; then cat \"$CACHE\"; else mkdir -p ~/.cache/omaclock; TMP=\"$CACHE.tmp\"; omarchy-font-list 2>/dev/null | tee \"$TMP\"; if [ -s \"$TMP\" ]; then mv \"$TMP\" \"$CACHE\"; cat \"$CACHE\"; else rm -f \"$TMP\"; fi; fi"]
         stdout: StdioCollector {
             waitForEnd: true
             onStreamFinished: {
                 var output = String(text || "").trim()
+                var opts = []
                 if (output.length > 0) {
                     var lines = output.split("\n")
-                    var opts = []
                     for (var i = 0; i < lines.length; i++) {
                         var name = lines[i].trim()
                         if (name.length > 0) opts.push({ value: name, label: name })
                     }
-                    root.fontOptions = opts
-                    root.fontListLoaded = true
-                    root.recomputeFontFilter()
                 }
+                var bundled = [
+                    { value: "Inter Variable",      label: "Inter Variable (bundled)" },
+                    { value: "Plus Jakarta Sans",   label: "Plus Jakarta Sans (bundled)" }
+                ]
+                for (var b = 0; b < bundled.length; b++) {
+                    var already = false
+                    for (var j = 0; j < opts.length; j++) {
+                        if (opts[j].value === bundled[b].value) { already = true; break }
+                    }
+                    if (!already) opts.push(bundled[b])
+                }
+                root.fontOptions = opts
+                root.fontListLoaded = true
+                root.recomputeFontFilter()
             }
         }
     }
@@ -146,6 +164,38 @@ BarWidget {
         root.colorRole = String(root.svc.settings.colorRole || "bar.text");
         root.customColor = String(root.svc.settings.color || "#ffffff");
         root.selectedFont = String(root.svc.settings.fontFamily || "");
+        root.clockFormat = String(root.svc.settings.format || "h:mm");
+        root.showSeconds = root.svc.settings.showSeconds === true;
+        root.showIcon = root.svc.settings.showIcon !== false;
+    }
+
+    function toggleShowIcon() {
+        if (!root.svc) return;
+        var next = {};
+        for (var k in root.svc.settings) next[k] = root.svc.settings[k];
+        next.showIcon = !root.showIcon;
+        root.showIcon = next.showIcon;
+        root.svc.settings = next;
+        root.svc.saveConfig();
+    }
+
+    property var formatPresets: [
+        { label: "12h",    fmt: "h:mm",    secs: false },
+        { label: "12h +s", fmt: "h:mm:ss", secs: true },
+        { label: "24h",    fmt: "HH:mm",   secs: false },
+        { label: "24h +s", fmt: "HH:mm:ss", secs: true }
+    ]
+
+    function setFormat(fmt, secs) {
+        if (!root.svc) return;
+        root.clockFormat = fmt;
+        root.showSeconds = secs;
+        var next = {};
+        for (var k in root.svc.settings) next[k] = root.svc.settings[k];
+        next.format = fmt;
+        next.showSeconds = secs;
+        root.svc.settings = next;
+        root.svc.saveConfig();
     }
 
     function setFontFamily(font) {
@@ -162,7 +212,7 @@ BarWidget {
         root.fontTabOpen = true;
         if (!root.fontListLoaded) root.fontListProc.running = true
         Qt.callLater(function() {
-            if (root.fontTabOpen && fontSearchField) fontSearchField.forceActiveFocus()
+            if (root.fontTabOpen) fontSelector.forceFocus()
         })
     }
 
@@ -256,6 +306,7 @@ BarWidget {
         }
     }
 
+    visible: root.showIcon
     moduleName: "ubeyidah.omaclock"
     onBarChanged: {
         if (!refreshService())
@@ -278,6 +329,16 @@ BarWidget {
             if (!refreshService())
                 restart();
 
+        }
+    }
+
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root.svc != null
+        onTriggered: {
+            var v = root.svc.settings.showIcon !== false;
+            if (v !== root.showIcon) root.showIcon = v;
         }
     }
 
@@ -306,8 +367,8 @@ BarWidget {
         owner: root
         bar: root.bar
         open: root.menuOpen
-        focusTarget: root.fontTabOpen ? fontSearchField : null
-        contentWidth: popup.fittedContentWidth(Style.space(300))
+        focusTarget: root.fontTabOpen ? fontSelector.focusTarget : null
+        contentWidth: popup.fittedContentWidth(Style.space(400))
         contentHeight: popup.fittedContentHeight(column.implicitHeight, Style.space(560))
 
         Column {
@@ -358,7 +419,7 @@ BarWidget {
                 minimum: 5
                 maximum: 45
                 step: 1
-                value: root.svc ? Math.round(root.svc.fontScale * 100) : 20
+                value: root.svc ? Math.round((root.svc.settings.fontScale != null ? Number(root.svc.settings.fontScale) : 0.15) * 100) : 20
                 onMoved: function(v) {
                     root.setSlider("fontScale", v);
                 }
@@ -449,16 +510,6 @@ BarWidget {
                 }
             }
 
-            Text {
-                visible: !root.fontTabOpen
-                text: "POSITION"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
-            }
-
             Grid {
                 visible: !root.fontTabOpen
                 width: parent.width
@@ -506,16 +557,70 @@ BarWidget {
 
             }
 
-            Text {
-                text: "COLOR"
-                color: Color.popups.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                topPadding: Style.space(4)
+            Row {
+                visible: !root.fontTabOpen
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                    text: "Opacity"
+                    color: Color.popups.text
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                    width: parent.width - opacityValue.implicitWidth - parent.spacing
+                }
+
+                Text {
+                    id: opacityValue
+
+                    text: Math.round(opacitySlider.liveValue) + "%"
+                    color: Qt.darker(Color.popups.text, 1.4)
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.body
+                }
+
             }
 
-            Row {
+            PanelSlider {
+                id: opacitySlider
+
+                visible: !root.fontTabOpen
+                width: parent.width
+                minimum: 0
+                maximum: 100
+                step: 1
+                value: root.svc ? Math.round((root.svc.settings.opacity != null ? Number(root.svc.settings.opacity) : 0.92) * 100) : 92
+                onMoved: function(v) {
+                    root.setSlider("opacity", v);
+                }
+                onReleased: function() {
+                    root.persistSliders();
+                }
+            }
+
+            Flow {
+                visible: !root.fontTabOpen
+                width: parent.width
+                spacing: Style.space(6)
+
+                Repeater {
+                    model: root.formatPresets
+
+                    delegate: Button {
+                        required property var modelData
+                        text: modelData.label
+                        selected: root.clockFormat === modelData.fmt && root.showSeconds === modelData.secs
+                        foreground: Color.popups.text
+                        horizontalPadding: Style.space(10)
+                        verticalPadding: 4
+                        fontSize: Style.font.bodySmall
+                        onClicked: root.setFormat(modelData.fmt, modelData.secs)
+                    }
+                }
+            }
+
+            Flow {
+                visible: !root.fontTabOpen
                 width: parent.width
                 spacing: Style.space(6)
 
@@ -557,6 +662,16 @@ BarWidget {
                     verticalPadding: 4
                     fontSize: Style.font.bodySmall
                     onClicked: root.openFontTab()
+                }
+
+                Button {
+                    text: root.showIcon ? "Hide" : "Show"
+                    selected: !root.showIcon
+                    foreground: Color.popups.text
+                    horizontalPadding: Style.space(10)
+                    verticalPadding: 4
+                    fontSize: Style.font.bodySmall
+                    onClicked: root.toggleShowIcon()
                 }
 
             }
@@ -659,185 +774,45 @@ BarWidget {
 
             }
 
-            // --- Font selector tab -------------------------------------------------
-            Item {
+            FontSelector {
+                id: fontSelector
+
                 visible: root.fontTabOpen
                 width: parent.width
-                implicitHeight: fontColumn.implicitHeight
-
-                Column {
-                    id: fontColumn
-                    width: parent.width
-                    spacing: Style.space(8)
-
-                    Text {
-                        text: "FONT"
-                        color: Color.popups.text
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        font.bold: true
-                        topPadding: Style.space(4)
-                    }
-
-                    Row {
-                        width: parent.width
-                        spacing: Style.space(6)
-
-                        Text {
-                            text: "Current"
-                            color: Color.popups.text
-                            font.family: Style.font.family
-                            font.pixelSize: Style.font.body
-                            width: parent.width - currentFontLabel.implicitWidth - parent.spacing
-                        }
-
-                        Text {
-                            id: currentFontLabel
-                            text: root.selectedFont.length > 0 ? root.selectedFont : "Default (Inter)"
-                            color: Qt.darker(Color.popups.text, 1.4)
-                            font.family: Style.font.family
-                            font.pixelSize: Style.font.body
-                            elide: Text.ElideRight
-                        }
-
-                    }
-
-                    TextField {
-                        id: fontSearchField
-                        width: parent.width
-                        activeFocusOnTab: true
-                        placeholderText: "Search fonts..."
-                        text: root.fontSearch
-                        foreground: Color.popups.text
-                        accent: Color.accent
-onTextChanged: {
-                        root.fontSearch = text
-                        root.recomputeFontFilter()
-                        fontList.currentIndex = -1
-                    }
-                    }
-
-                    Text {
-                        visible: !root.fontListLoaded
-                        text: "Loading fonts..."
-                        color: Qt.darker(Color.popups.text, 1.5)
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        font.italic: true
-                    }
-
-                    Text {
-                        visible: root.fontListLoaded && root.fontOptions.length === 0
-                        text: "No fonts found"
-                        color: Qt.darker(Color.popups.text, 1.5)
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        font.italic: true
-                    }
-
-                    Text {
-                        visible: root.fontListLoaded && root.fontOptions.length > 0 && root.filteredFonts.length === 0
-                        text: "No matches"
-                        color: Qt.darker(Color.popups.text, 1.5)
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        font.italic: true
-                    }
-
-                    Rectangle {
-                        visible: root.fontListLoaded && root.filteredFonts.length > 0
-                        width: parent.width
-                        height: Math.min(Style.space(200), root.filteredFonts.length * Style.space(28))
-                        radius: Style.cornerRadius
-                        color: "transparent"
-
-                        ListView {
-                            id: fontList
-                            anchors.fill: parent
-                            clip: true
-                            boundsBehavior: Flickable.StopAtBounds
-                            model: root.filteredFonts
-                            currentIndex: -1
-
-                            delegate: Rectangle {
-                                required property var modelData
-                                required property int index
-                                readonly property string label: modelData !== undefined && modelData.label !== undefined
-                                    ? String(modelData.label) : String(modelData)
-                                readonly property string fontValue: modelData !== undefined && modelData.value !== undefined
-                                    ? String(modelData.value) : String(modelData)
-                                readonly property bool selected: root.selectedFont === fontValue
-
-                                width: fontList.width
-                                height: Style.space(28)
-                                radius: Math.max(2, Style.cornerRadius)
-                                color: fontList.currentIndex === index ? Style.selectedFill
-                                    : (selected ? Util.alpha(Color.accent, 0.18) : "transparent")
-
-                                Text {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: Style.space(8)
-                                    anchors.rightMargin: Style.space(8)
-                                    text: parent.label
-                                    color: fontList.currentIndex === index ? Color.accent : Color.popups.text
-                                    font.family: Style.font.family
-                                    font.pixelSize: Style.font.body
-                                    elide: Text.ElideRight
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onPositionChanged: fontList.currentIndex = parent.index
-                                    onClicked: root.setFontFamily(parent.fontValue)
-                                }
-                            }
-                        }
-                    }
-
+                fontOptions: root.fontOptions
+                filteredFonts: root.filteredFonts
+                selectedFont: root.selectedFont
+                fontSearch: root.fontSearch
+                fontListLoaded: root.fontListLoaded
+                onFontSelected: function(font) { root.setFontFamily(font) }
+                onSearchChanged: function(text) {
+                    root.fontSearch = text
+                    root.recomputeFontFilter()
                 }
             }
 
-            Row {
-                width: parent.width
-                spacing: Style.space(8)
+            Rectangle {
+                id: resetBtn
 
-                Rectangle {
-                    id: resetBtn
-
-                    visible: !root.fontTabOpen
-                    width: Style.space(88)
-                    height: Style.space(26)
-                    radius: Style.cornerRadius
-                    color: Style.selectedFill
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "RESET"
-                        color: Color.foreground
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.body
-                        font.bold: true
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.resetAll()
-                    }
-
-                }
+                visible: !root.fontTabOpen
+                width: Style.space(88)
+                height: Style.space(26)
+                radius: Style.cornerRadius
+                color: Style.selectedFill
 
                 Text {
-                    text: "Resets size and position"
-                    color: Qt.darker(Color.popups.text, 1.5)
+                    anchors.centerIn: parent
+                    text: "RESET"
+                    color: Color.foreground
                     font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: resetBtn.verticalCenter
-                    elide: Text.ElideRight
-                    width: parent.width - resetBtn.width - parent.spacing
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.resetAll()
                 }
 
             }
